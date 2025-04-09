@@ -16,6 +16,9 @@ import ProjectDetails from './pages/ProjectDetails';
 import Bugs from './pages/Bugs';
 import BugDetails from './pages/BugDetails';
 import NewBug from './pages/NewBug';
+import Activity from './pages/Activity';
+import Users from './pages/Users';
+import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -59,6 +62,28 @@ const App = () => (
                   <ProtectedRoute 
                     element={<NewBug />} 
                     requiredRoles={['admin', 'tester']} 
+                  />
+                } 
+              />
+              <Route 
+                path="/activity" 
+                element={<ProtectedRoute element={<Activity />} />} 
+              />
+              <Route 
+                path="/users" 
+                element={
+                  <ProtectedRoute 
+                    element={<Users />} 
+                    requiredRoles={['admin']} 
+                  />
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute 
+                    element={<Settings />} 
+                    requiredRoles={['admin']} 
                   />
                 } 
               />
