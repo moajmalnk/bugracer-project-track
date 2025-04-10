@@ -4,17 +4,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useBugs } from '@/context/BugContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, User, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { mockDataStore } from '@/lib/mockData';
 
 interface ActivityItem {
   id: string;
   type: string;
-  user_id: string;
+  userId: string;
   description: string;
-  project_id: string;
-  created_at: string;
-  user_name?: string;
-  project_name?: string;
+  projectId: string;
+  createdAt: Date;
 }
 
 const Activity = () => {
@@ -31,30 +29,19 @@ const Activity = () => {
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('activities')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
+      const data = await mockDataStore.getActivities();
 
       if (data) {
         // Fetch user names for activities
-        const userIds = [...new Set(data.map(activity => activity.user_id))];
+        const userIds = [...new Set(data.map(activity => activity.userId))];
         const userMap: Record<string, string> = {};
         
         // Get user profiles
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
+        const users = await mockDataStore.getUsers();
         
-        if (profilesError) throw profilesError;
-        
-        if (profiles) {
-          profiles.forEach(profile => {
-            userMap[profile.user_id] = profile.full_name;
+        if (users) {
+          users.forEach(user => {
+            userMap[user.id] = user.name;
           });
         }
         
@@ -85,7 +72,7 @@ const Activity = () => {
     }
   };
 
-  const getTimeSince = (dateString: string) => {
+  const getTimeSince = (dateString: Date) => {
     const date = new Date(dateString);
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -151,11 +138,11 @@ const Activity = () => {
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{userNames[activity.user_id] || 'Unknown User'}</p>
-                      <p className="text-xs text-muted-foreground">{getTimeSince(activity.created_at)}</p>
+                      <p className="text-sm font-medium">{userNames[activity.userId] || 'Unknown User'}</p>
+                      <p className="text-xs text-muted-foreground">{getTimeSince(activity.createdAt)}</p>
                     </div>
                     <p className="text-sm text-foreground">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">Project: {getProjectName(activity.project_id)}</p>
+                    <p className="text-xs text-muted-foreground">Project: {getProjectName(activity.projectId)}</p>
                   </div>
                 </div>
               ))}

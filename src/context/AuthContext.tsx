@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '@/types';
+import { User, UserRole } from '@/types';
 import { toast } from "@/components/ui/use-toast";
 import { mockDataStore } from '@/lib/mockData';
 import { api } from '@/lib/api';
@@ -91,12 +90,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // If we're offline and it's a demo account, allow login
       if (!navigator.onLine && email.includes('demo')) {
+        // Ensure we cast the role to the correct UserRole type
+        const demoRole: UserRole = email.includes('admin') ? 'admin' : 'tester';
+        
         // Simulate login for demo accounts when offline
         const user = mockDataStore.getCurrentUser() || {
           id: 'offline-user',
           name: 'Demo User',
           email: email,
-          role: email.includes('admin') ? 'admin' : 'tester',
+          role: demoRole,
         };
         setCurrentUser(user);
         setIsOfflineMode(true);
@@ -131,11 +133,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // For demo purposes, allow login with demo accounts even if offline
         if (email.includes('demo')) {
+          // Ensure we cast the role to the correct UserRole type
+          const demoRole: UserRole = email.includes('admin') ? 'admin' : 'tester';
+          
           const user = {
             id: 'offline-user',
             name: 'Demo User',
             email: email,
-            role: email.includes('admin') ? 'admin' : 'tester',
+            role: demoRole,
           };
           setCurrentUser(user);
           toast({

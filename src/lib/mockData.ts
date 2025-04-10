@@ -1,4 +1,3 @@
-
 import { User, Bug, Project, Dashboard, BugStatus, BugPriority, UserRole } from '@/types';
 
 // Mock data store (will be replaced with PHP/MySQL later)
@@ -70,7 +69,9 @@ class MockDataStore {
       priority: 'high',
       status: 'pending',
       createdAt: new Date('2025-04-01'),
-      updatedAt: new Date('2025-04-01')
+      updatedAt: new Date('2025-04-01'),
+      screenshots: [],
+      files: []
     },
     {
       id: 'bug-2',
@@ -83,7 +84,9 @@ class MockDataStore {
       priority: 'medium',
       status: 'pending',
       createdAt: new Date('2025-04-02'),
-      updatedAt: new Date('2025-04-03')
+      updatedAt: new Date('2025-04-03'),
+      screenshots: [],
+      files: []
     },
     {
       id: 'bug-3',
@@ -96,7 +99,9 @@ class MockDataStore {
       priority: 'high',
       status: 'fixed',
       createdAt: new Date('2025-04-01'),
-      updatedAt: new Date('2025-04-05')
+      updatedAt: new Date('2025-04-05'),
+      screenshots: [],
+      files: []
     }
   ];
   
