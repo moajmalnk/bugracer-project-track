@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
-import { BugIcon, Info } from 'lucide-react';
+import { BugIcon, Info, WifiOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -17,30 +18,39 @@ const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('tester');
-  const { login } = useAuth();
+  const { login, isOfflineMode } = useAuth();
   const navigate = useNavigate();
+  const [networkError, setNetworkError] = useState(false);
+
+  // Check if we're online
+  const isOnline = navigator.onLine;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setNetworkError(false);
 
     try {
       const success = await login(email, password);
       if (success) {
         navigate('/dashboard');
-      } else {
+      } else if (!isOfflineMode) {
         toast({
           title: "Login failed",
           description: "Invalid email or password. Please try again.",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "An error occurred",
-        description: "Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('fetch'))) {
+        setNetworkError(true);
+      } else {
+        toast({
+          title: "An error occurred",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -49,6 +59,7 @@ const Login = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setNetworkError(false);
 
     try {
       // Create the user in Supabase Auth
@@ -58,6 +69,10 @@ const Login = () => {
       });
 
       if (authError) {
+        if (authError.message.includes('Failed to fetch') || authError.message.includes('fetch')) {
+          setNetworkError(true);
+          return;
+        }
         throw authError;
       }
 
@@ -86,11 +101,15 @@ const Login = () => {
         setIsSignUp(false);
       }
     } catch (error: any) {
-      toast({
-        title: "Sign-up failed",
-        description: error.message || "An error occurred during sign-up.",
-        variant: "destructive",
-      });
+      if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('fetch'))) {
+        setNetworkError(true);
+      } else {
+        toast({
+          title: "Sign-up failed",
+          description: error.message || "An error occurred during sign-up.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -106,6 +125,26 @@ const Login = () => {
           <h1 className="text-3xl font-bold">BugRacer</h1>
           <p className="text-muted-foreground">Track bugs, ship faster</p>
         </div>
+        
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4 mr-2" />
+            <AlertTitle>You are offline</AlertTitle>
+            <AlertDescription>
+              Network connection is unavailable. You can still use demo accounts to explore the app.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {networkError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Connection Error</AlertTitle>
+            <AlertDescription>
+              Failed to connect to the server. Please check your internet connection or try again later.
+              {!isSignUp && " You can use a demo account to login offline."}
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Card>
           <CardHeader>
@@ -175,7 +214,7 @@ const Login = () => {
               )}
             </CardContent>
             <CardFooter className="flex flex-col space-y-2">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+              <Button className="w-full" type="submit" disabled={isLoading || (isSignUp && !isOnline)}>
                 {isLoading 
                   ? (isSignUp ? "Creating account..." : "Signing in...") 
                   : (isSignUp ? "Create Account" : "Sign in")
@@ -203,8 +242,10 @@ const Login = () => {
             <div>
               <h3 className="font-medium text-sm">First time here?</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Create a new account to start tracking bugs with BugRacer. 
-                Or use the demo accounts with any password.
+                {!isOnline 
+                  ? "You're currently offline. Use 'demo@example.com' as email with any password to explore the app."
+                  : "Create a new account to start tracking bugs with BugRacer. Or use demo@example.com with any password."
+                }
               </p>
             </div>
           </div>
