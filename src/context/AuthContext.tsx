@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserRole } from '@/types';
-import { supabase } from '@/lib/supabase';
+import { User } from '@/types';
 import { toast } from "@/components/ui/use-toast";
+import { mockDataStore } from '@/lib/mockData';
+import { api } from '@/lib/api';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -24,9 +25,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Check active session on mount
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await fetchUserProfile(session.user.id);
+        const user = mockDataStore.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -38,27 +39,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     checkSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session && event === 'SIGNED_IN') {
-          try {
-            await fetchUserProfile(session.user.id);
-          } catch (error) {
-            console.error('Error fetching profile on auth change:', error);
-            checkNetworkAndEnableOfflineMode();
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setCurrentUser(null);
-        }
-        setIsLoading(false);
+    // Listen for online/offline events
+    const handleOnline = () => {
+      if (isOfflineMode) {
+        toast({
+          title: "You are back online",
+          description: "Reconnected to the server"
+        });
+        setIsOfflineMode(false);
       }
-    );
-
-    return () => {
-      subscription.unsubscribe();
     };
-  }, []);
+    
+    const handleOffline = () => {
+      toast({
+        title: "You are offline",
+        description: "Using offline mode with limited functionality",
+        variant: "destructive",
+      });
+      setIsOfflineMode(true);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isOfflineMode]);
 
   const checkNetworkAndEnableOfflineMode = () => {
     if (!navigator.onLine) {
@@ -77,34 +85,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        setCurrentUser({
-          id: userId,
-          name: data.full_name,
-          email: '', // Email is not stored in the profile for security reasons
-          role: data.role,
-          avatar: data.avatar_url || undefined
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setCurrentUser(null);
-      throw error; // Rethrow to be caught by the caller
-    }
-  };
-
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
@@ -112,12 +92,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // If we're offline and it's a demo account, allow login
       if (!navigator.onLine && email.includes('demo')) {
         // Simulate login for demo accounts when offline
-        setCurrentUser({
+        const user = mockDataStore.getCurrentUser() || {
           id: 'offline-user',
           name: 'Demo User',
           email: email,
           role: email.includes('admin') ? 'admin' : 'tester',
-        });
+        };
+        setCurrentUser(user);
         setIsOfflineMode(true);
         toast({
           title: "Offline login successful",
@@ -126,42 +107,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       }
 
-      // Regular online login
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
-          checkNetworkAndEnableOfflineMode();
-          
-          // For demo purposes, allow login with demo accounts even if connection fails
-          if (email.includes('demo')) {
-            setCurrentUser({
-              id: 'offline-user',
-              name: 'Demo User',
-              email: email,
-              role: email.includes('admin') ? 'admin' : 'tester',
-            });
-            toast({
-              title: "Demo login successful",
-              description: "Using limited functionality due to connection issues",
-            });
-            return true;
-          }
-        } else {
-          toast({
-            title: "Login failed",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-        return false;
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
+      // Regular login
+      const { user, token } = await mockDataStore.loginUser(email, password);
+      
+      if (user) {
+        setCurrentUser(user);
+        api.setToken(token);
         toast({
           title: "Login successful",
           description: "Welcome to BugRacer!",
@@ -175,23 +126,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Login error:', error);
       
       // Check if it's a network error
-      if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('fetch'))) {
+      if (!navigator.onLine) {
         checkNetworkAndEnableOfflineMode();
         
-        // For demo purposes, allow login with demo accounts even if connection fails
+        // For demo purposes, allow login with demo accounts even if offline
         if (email.includes('demo')) {
-          setCurrentUser({
+          const user = {
             id: 'offline-user',
             name: 'Demo User',
             email: email,
             role: email.includes('admin') ? 'admin' : 'tester',
-          });
+          };
+          setCurrentUser(user);
           toast({
             title: "Demo login successful",
             description: "Using limited functionality due to connection issues",
           });
           return true;
         }
+      } else {
+        toast({
+          title: "Login failed",
+          description: error.message || "Invalid email or password",
+          variant: "destructive",
+        });
       }
       
       return false;
@@ -203,14 +161,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      if (isOfflineMode) {
-        // Just clear the user state if in offline mode
-        setCurrentUser(null);
-        setIsOfflineMode(false);
-      } else {
-        await supabase.auth.signOut();
-        setCurrentUser(null);
-      }
+      mockDataStore.logout();
+      api.setToken(null);
+      setCurrentUser(null);
+      setIsOfflineMode(false);
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

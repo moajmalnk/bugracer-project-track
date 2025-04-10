@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Bug, BugPriority, BugStatus, Dashboard, Project } from '@/types';
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from '@/lib/supabase';
+import { mockDataStore } from '@/lib/mockData';
 import { useAuth } from './AuthContext';
 
 interface BugContextType {
@@ -25,7 +25,6 @@ const BugContext = createContext<BugContextType | undefined>(undefined);
 export const BugProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [bugs, setBugs] = useState<Bug[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
 
@@ -42,7 +41,6 @@ export const BugProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       await Promise.all([
         fetchProjects(),
-        fetchDashboards(),
         fetchBugs()
       ]);
     } catch (error) {
@@ -58,131 +56,34 @@ export const BugProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const fetchProjects = async () => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*');
-    
-    if (error) throw error;
-    
-    if (data) {
-      const formattedProjects: Project[] = data.map(project => ({
-        id: project.id,
-        name: project.name,
-        description: project.description,
-        isActive: project.is_active,
-        dashboards: [] // Will be populated after dashboards are fetched
-      }));
-      setProjects(formattedProjects);
-    }
-  };
-
-  const fetchDashboards = async () => {
-    const { data, error } = await supabase
-      .from('dashboards')
-      .select('*');
-    
-    if (error) throw error;
-    
-    if (data) {
-      const formattedDashboards: Dashboard[] = data.map(dashboard => ({
-        id: dashboard.id,
-        name: dashboard.name,
-        projectId: dashboard.project_id
-      }));
-      setDashboards(formattedDashboards);
+    try {
+      const data = await mockDataStore.getProjects();
+      setProjects(data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      throw error;
     }
   };
 
   const fetchBugs = async () => {
-    const { data, error } = await supabase
-      .from('bugs')
-      .select('*');
-    
-    if (error) throw error;
-    
-    if (data) {
-      const formattedBugs: Bug[] = data.map(bug => ({
-        id: bug.id,
-        name: bug.name,
-        description: bug.description,
-        projectId: bug.project_id,
-        affectedDashboards: bug.affected_dashboards || [],
-        reporterId: bug.reporter_id,
-        assigneeId: bug.assignee_id || undefined,
-        priority: bug.priority as BugPriority,
-        status: bug.status as BugStatus,
-        createdAt: new Date(bug.created_at),
-        updatedAt: new Date(bug.updated_at),
-        screenshots: bug.screenshots || [],
-        files: bug.files || []
-      }));
-      setBugs(formattedBugs);
+    try {
+      const data = await mockDataStore.getBugs();
+      setBugs(data);
+    } catch (error) {
+      console.error('Error fetching bugs:', error);
+      throw error;
     }
   };
 
-  // Update projects with their dashboards
-  useEffect(() => {
-    if (projects.length && dashboards.length) {
-      const updatedProjects = projects.map(project => ({
-        ...project,
-        dashboards: dashboards.filter(d => d.projectId === project.id)
-      }));
-      setProjects(updatedProjects);
-    }
-  }, [dashboards]);
-
   const addBug = async (newBugData: Omit<Bug, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const now = new Date().toISOString();
+      const newBug = await mockDataStore.addBug(newBugData);
+      setBugs([newBug, ...bugs]);
       
-      const { data, error } = await supabase
-        .from('bugs')
-        .insert({
-          name: newBugData.name,
-          description: newBugData.description,
-          project_id: newBugData.projectId,
-          affected_dashboards: newBugData.affectedDashboards,
-          reporter_id: newBugData.reporterId,
-          assignee_id: newBugData.assigneeId || null,
-          priority: newBugData.priority,
-          status: newBugData.status || 'pending',
-          created_at: now,
-          updated_at: now,
-          screenshots: newBugData.screenshots || [],
-          files: newBugData.files || []
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      if (data) {
-        const newBug: Bug = {
-          id: data.id,
-          name: data.name,
-          description: data.description,
-          projectId: data.project_id,
-          affectedDashboards: data.affected_dashboards || [],
-          reporterId: data.reporter_id,
-          assigneeId: data.assignee_id || undefined,
-          priority: data.priority as BugPriority,
-          status: data.status as BugStatus,
-          createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.updated_at),
-          screenshots: data.screenshots || [],
-          files: data.files || []
-        };
-        
-        setBugs([newBug, ...bugs]);
-        
-        // Add activity record
-        await recordActivity('bug_reported', currentUser?.id || '', `Reported a new bug: "${newBug.name}"`, newBug.projectId);
-        
-        toast({
-          title: "Bug reported successfully",
-          description: `Bug "${newBug.name}" has been created.`,
-        });
-      }
+      toast({
+        title: "Bug reported successfully",
+        description: `Bug "${newBug.name}" has been created.`,
+      });
     } catch (error) {
       console.error('Error adding bug:', error);
       toast({
@@ -195,29 +96,13 @@ export const BugProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateBugStatus = async (bugId: string, status: BugStatus) => {
     try {
-      const { error } = await supabase
-        .from('bugs')
-        .update({ 
-          status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', bugId);
-      
-      if (error) throw error;
+      const updatedBug = await mockDataStore.updateBugStatus(bugId, status);
       
       const updatedBugs = bugs.map(bug => 
-        bug.id === bugId 
-          ? { ...bug, status, updatedAt: new Date() } 
-          : bug
+        bug.id === bugId ? updatedBug : bug
       );
       
       setBugs(updatedBugs);
-      
-      const bug = bugs.find(b => b.id === bugId);
-      if (bug) {
-        const statusAction = status === 'fixed' ? 'fixed' : status === 'declined' ? 'declined' : 'updated status of';
-        await recordActivity(`bug_${status}`, currentUser?.id || '', `${statusAction} bug: "${bug.name}"`, bug.projectId);
-      }
       
       toast({
         title: "Bug status updated",
@@ -235,28 +120,13 @@ export const BugProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateBugAssignee = async (bugId: string, assigneeId: string) => {
     try {
-      const { error } = await supabase
-        .from('bugs')
-        .update({ 
-          assignee_id: assigneeId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', bugId);
-      
-      if (error) throw error;
+      const updatedBug = await mockDataStore.updateBugAssignee(bugId, assigneeId);
       
       const updatedBugs = bugs.map(bug => 
-        bug.id === bugId 
-          ? { ...bug, assigneeId, updatedAt: new Date() } 
-          : bug
+        bug.id === bugId ? updatedBug : bug
       );
       
       setBugs(updatedBugs);
-      
-      const bug = bugs.find(b => b.id === bugId);
-      if (bug) {
-        await recordActivity('bug_assigned', currentUser?.id || '', `Assigned bug "${bug.name}" to a developer`, bug.projectId);
-      }
       
       toast({
         title: "Bug assigned",
@@ -272,28 +142,20 @@ export const BugProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const recordActivity = async (type: string, userId: string, description: string, projectId: string) => {
-    try {
-      await supabase
-        .from('activities')
-        .insert({
-          type,
-          user_id: userId,
-          description,
-          project_id: projectId,
-          created_at: new Date().toISOString()
-        });
-    } catch (error) {
-      console.error('Error recording activity:', error);
-    }
-  };
-
   const getProjectById = (id: string): Project | undefined => {
     return projects.find(project => project.id === id);
   };
 
   const getDashboardById = (id: string): Dashboard | undefined => {
-    return dashboards.find(dashboard => dashboard.id === id);
+    const allDashboards: Dashboard[] = [];
+    
+    projects.forEach(project => {
+      if (project.dashboards) {
+        allDashboards.push(...project.dashboards);
+      }
+    });
+    
+    return allDashboards.find(dashboard => dashboard.id === id);
   };
 
   const getBugsByProject = (projectId: string): Bug[] => {

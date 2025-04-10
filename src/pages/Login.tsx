@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -8,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { BugIcon, Info, WifiOff } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { mockDataStore } from '@/lib/mockData';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -42,7 +41,7 @@ const Login = () => {
         });
       }
     } catch (error: any) {
-      if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('fetch'))) {
+      if (!navigator.onLine) {
         setNetworkError(true);
       } else {
         toast({
@@ -62,46 +61,28 @@ const Login = () => {
     setNetworkError(false);
 
     try {
-      // Create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      if (!isOnline) {
+        setNetworkError(true);
+        setIsLoading(false);
+        return;
+      }
+
+      await mockDataStore.registerUser(
         email,
         password,
+        fullName,
+        role as 'admin' | 'developer' | 'tester'
+      );
+
+      toast({
+        title: "Account created",
+        description: "You can now sign in with your credentials.",
       });
 
-      if (authError) {
-        if (authError.message.includes('Failed to fetch') || authError.message.includes('fetch')) {
-          setNetworkError(true);
-          return;
-        }
-        throw authError;
-      }
-
-      // If the sign up was successful and we have a user
-      if (authData.user) {
-        // Create a profile for the user
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: authData.user.id,
-            full_name: fullName,
-            role: role as 'admin' | 'developer' | 'tester',
-            avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random&color=fff`,
-          });
-
-        if (profileError) {
-          throw profileError;
-        }
-
-        toast({
-          title: "Account created",
-          description: "You can now sign in with your credentials.",
-        });
-
-        // Switch back to login view
-        setIsSignUp(false);
-      }
+      // Switch back to login view
+      setIsSignUp(false);
     } catch (error: any) {
-      if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('fetch'))) {
+      if (!navigator.onLine) {
         setNetworkError(true);
       } else {
         toast({
