@@ -1,5 +1,4 @@
-
-import { useState, FormEvent, useRef, ChangeEvent } from 'react';
+import React, { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useBugs } from '@/context/BugContext';
 import { useAuth } from '@/context/AuthContext';
@@ -202,7 +201,7 @@ const NewBug = () => {
   };
   
   // Clean up object URLs when component unmounts
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       screenshots.forEach(file => {
         if (file.preview) URL.revokeObjectURL(file.preview);
