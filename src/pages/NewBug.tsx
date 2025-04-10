@@ -1,5 +1,5 @@
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useRef, ChangeEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useBugs } from '@/context/BugContext';
 import { useAuth } from '@/context/AuthContext';
@@ -26,9 +26,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
   ImagePlus, 
-  Paperclip 
+  Paperclip,
+  X,
+  FileImage,
+  File
 } from 'lucide-react';
 import { BugPriority, Project } from '@/types';
+import { toast } from '@/components/ui/use-toast';
+
+interface FileWithPreview extends File {
+  preview?: string;
+}
 
 const NewBug = () => {
   const navigate = useNavigate();
@@ -44,9 +52,13 @@ const NewBug = () => {
   const [priority, setPriority] = useState<BugPriority>('medium');
   const [selectedDashboards, setSelectedDashboards] = useState<string[]>([]);
   
-  // Screenshots and files would normally be handled with file uploads
-  const [screenshots, setScreenshots] = useState<string[]>([]);
-  const [files, setFiles] = useState<string[]>([]);
+  // File uploads
+  const [screenshots, setScreenshots] = useState<FileWithPreview[]>([]);
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
+  
+  // Refs for file inputs
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get the dashboards for the selected project
   const selectedProject = projects.find(project => project.id === projectId);
@@ -59,9 +71,36 @@ const NewBug = () => {
       return;
     }
     
+    if (!name.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a bug name",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!projectId) {
+      toast({
+        title: "Error",
+        description: "Please select a project",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
+      // Convert File objects to URLs (in a real app, these would be uploaded to a server)
+      const screenshotUrls = screenshots.map(file => 
+        file.preview || URL.createObjectURL(file)
+      );
+      
+      const fileUrls = files.map(file => 
+        file.preview || URL.createObjectURL(file)
+      );
+      
       addBug({
         name,
         description,
@@ -70,13 +109,18 @@ const NewBug = () => {
         affectedDashboards: selectedDashboards,
         priority,
         status: 'pending',
-        screenshots,
-        files,
+        screenshots: screenshotUrls,
+        files: fileUrls,
       });
       
       navigate('/bugs');
     } catch (error) {
       console.error('Error submitting bug:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit bug report",
+        variant: "destructive",
+      });
       setIsSubmitting(false);
     }
   };
@@ -88,6 +132,87 @@ const NewBug = () => {
       setSelectedDashboards(selectedDashboards.filter(id => id !== dashboardId));
     }
   };
+  
+  const handleScreenshotClick = () => {
+    screenshotInputRef.current?.click();
+  };
+  
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleScreenshotChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files) as FileWithPreview[];
+      
+      // Create preview URLs for each file
+      newFiles.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          file.preview = URL.createObjectURL(file);
+        }
+      });
+      
+      setScreenshots(prev => [...prev, ...newFiles]);
+      
+      // Reset input value so the same file can be selected again
+      e.target.value = '';
+    }
+  };
+  
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files) as FileWithPreview[];
+      
+      // Create preview URLs for image files
+      newFiles.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          file.preview = URL.createObjectURL(file);
+        }
+      });
+      
+      setFiles(prev => [...prev, ...newFiles]);
+      
+      // Reset input value so the same file can be selected again
+      e.target.value = '';
+    }
+  };
+  
+  const removeScreenshot = (index: number) => {
+    const newScreenshots = [...screenshots];
+    
+    // Clean up the object URL to prevent memory leaks
+    if (newScreenshots[index].preview) {
+      URL.revokeObjectURL(newScreenshots[index].preview!);
+    }
+    
+    newScreenshots.splice(index, 1);
+    setScreenshots(newScreenshots);
+  };
+  
+  const removeFile = (index: number) => {
+    const newFiles = [...files];
+    
+    // Clean up the object URL to prevent memory leaks
+    if (newFiles[index].preview) {
+      URL.revokeObjectURL(newFiles[index].preview!);
+    }
+    
+    newFiles.splice(index, 1);
+    setFiles(newFiles);
+  };
+  
+  // Clean up object URLs when component unmounts
+  React.useEffect(() => {
+    return () => {
+      screenshots.forEach(file => {
+        if (file.preview) URL.revokeObjectURL(file.preview);
+      });
+      
+      files.forEach(file => {
+        if (file.preview) URL.revokeObjectURL(file.preview);
+      });
+    };
+  }, [screenshots, files]);
 
   return (
     <div className="space-y-6">
@@ -198,29 +323,127 @@ const NewBug = () => {
               </div>
             )}
             
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label>Attachments</Label>
+              
+              {/* Hidden file inputs */}
+              <input
+                type="file"
+                ref={screenshotInputRef}
+                onChange={handleScreenshotChange}
+                accept="image/*"
+                className="hidden"
+                multiple
+              />
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                multiple
+              />
+              
               <div className="grid gap-4 md:grid-cols-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="h-24 flex flex-col items-center justify-center"
-                >
-                  <ImagePlus className="h-8 w-8 mb-2 text-muted-foreground" />
-                  <span>Add Screenshots</span>
-                </Button>
+                {/* Screenshots section */}
+                <div className="space-y-3">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="h-24 w-full flex flex-col items-center justify-center"
+                    onClick={handleScreenshotClick}
+                  >
+                    <ImagePlus className="h-8 w-8 mb-2 text-muted-foreground" />
+                    <span>Add Screenshots</span>
+                  </Button>
+                  
+                  {/* Preview of screenshots */}
+                  {screenshots.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Screenshots ({screenshots.length})</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {screenshots.map((file, index) => (
+                          <div key={index} className="relative rounded border p-1 group">
+                            {file.preview ? (
+                              <img 
+                                src={file.preview} 
+                                alt={`Screenshot ${index + 1}`}
+                                className="h-20 w-full object-cover rounded"
+                              />
+                            ) : (
+                              <div className="h-20 w-full flex items-center justify-center bg-muted rounded">
+                                <FileImage className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="h-6 w-6 absolute top-1 right-1 opacity-70 hover:opacity-100"
+                              onClick={() => removeScreenshot(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                            <div className="text-xs truncate mt-1 px-1">
+                              {file.name}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="h-24 flex flex-col items-center justify-center"
-                >
-                  <Paperclip className="h-8 w-8 mb-2 text-muted-foreground" />
-                  <span>Attach Files</span>
-                </Button>
+                {/* Files section */}
+                <div className="space-y-3">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="h-24 w-full flex flex-col items-center justify-center"
+                    onClick={handleFileClick}
+                  >
+                    <Paperclip className="h-8 w-8 mb-2 text-muted-foreground" />
+                    <span>Attach Files</span>
+                  </Button>
+                  
+                  {/* Preview of files */}
+                  {files.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Files ({files.length})</Label>
+                      <div className="space-y-2">
+                        {files.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between rounded border p-2 text-sm group">
+                            <div className="flex items-center space-x-2 overflow-hidden">
+                              {file.preview ? (
+                                <img 
+                                  src={file.preview} 
+                                  alt={`File preview ${index + 1}`}
+                                  className="h-8 w-8 object-cover rounded"
+                                />
+                              ) : (
+                                <File className="h-8 w-8 text-muted-foreground" />
+                              )}
+                              <span className="truncate max-w-[120px]">{file.name}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-70 hover:opacity-100"
+                              onClick={() => removeFile(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Note: File uploads are not functional in this demo.
+              
+              <p className="text-xs text-muted-foreground">
+                Note: In this demo, files are stored temporarily in the browser and will be lost on page refresh.
               </p>
             </div>
           </CardContent>
