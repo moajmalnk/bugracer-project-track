@@ -23,7 +23,10 @@ try {
   });
   
   // Check connection
-  supabase.from('profiles').select('count', { count: 'exact', head: true })
+  // Fix: Convert PromiseLike to Promise with Promise.resolve
+  Promise.resolve(
+    supabase.from('profiles').select('count', { count: 'exact', head: true })
+  )
     .then(() => {
       console.log('Supabase connection successful');
     })
