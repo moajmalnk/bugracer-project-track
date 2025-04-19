@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -87,83 +86,83 @@ export default function Dashboard() {
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-4">
+      <div className="flex flex-col gap-1 sm:gap-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Welcome back, {currentUser?.name || 'User'}! Here's an overview of your bug tracking system.
         </p>
       </div>
 
       {/* Overview Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bugs</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-2 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Bugs</CardTitle>
+            <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-6 sm:h-8 w-16 sm:w-20" />
             ) : (
-              <div className="text-2xl font-bold">{bugs.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{bugs.length}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {bugs.filter(bug => bug.status === 'fixed').length} bugs fixed
             </p>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Bugs</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-2 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Your Bugs</CardTitle>
+            <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-6 sm:h-8 w-16 sm:w-20" />
             ) : (
-              <div className="text-2xl font-bold">{userBugs.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{userBugs.length}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {userBugs.filter(bug => bug.status === 'fixed').length} bugs fixed
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-            <PieChart className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-2 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Projects</CardTitle>
+            <PieChart className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-6 sm:h-8 w-16 sm:w-20" />
             ) : (
-              <div className="text-2xl font-bold">{projects.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{projects.length}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {projects.length > 0 ? 'Active projects' : 'No active projects'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bug Fix Rate</CardTitle>
-            <LineChartIcon className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-2 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Bug Fix Rate</CardTitle>
+            <LineChartIcon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-6 sm:h-8 w-16 sm:w-20" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-xl sm:text-2xl font-bold">
                 {bugs.length > 0 
                   ? `${Math.round((bugs.filter(bug => bug.status === 'fixed').length / bugs.length) * 100)}%` 
                   : 'N/A'}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
               {bugs.filter(bug => bug.status === 'fixed').length} out of {bugs.length}
             </p>
           </CardContent>
@@ -171,32 +170,32 @@ export default function Dashboard() {
       </div>
 
       {/* Analytics Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="recent">Recent Bugs</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-2 sm:space-y-4">
+        <TabsList className="w-full h-auto flex flex-wrap gap-1 sm:gap-0 sm:h-10 bg-transparent sm:bg-muted p-1">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm h-8 sm:h-9">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs sm:text-sm h-8 sm:h-9">Analytics</TabsTrigger>
+          <TabsTrigger value="projects" className="text-xs sm:text-sm h-8 sm:h-9">Projects</TabsTrigger>
+          <TabsTrigger value="recent" className="text-xs sm:text-sm h-8 sm:h-9">Recent Bugs</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <TabsContent value="overview" className="space-y-2 sm:space-y-4">
+          <div className="grid gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="lg:col-span-4">
-              <CardHeader>
-                <CardTitle>Weekly Bug Activity</CardTitle>
-                <CardDescription>Bugs reported and fixed in the last week</CardDescription>
+              <CardHeader className="space-y-1 sm:space-y-1.5">
+                <CardTitle className="text-base sm:text-lg">Weekly Bug Activity</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Bugs reported and fixed in the last week</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="h-[300px] flex items-center justify-center">
-                    <Skeleton className="h-[250px] w-full" />
+                  <div className="h-[200px] sm:h-[300px] flex items-center justify-center">
+                    <Skeleton className="h-[180px] sm:h-[250px] w-full" />
                   </div>
                 ) : (
-                  <ChartContainer config={{}} className="aspect-auto h-[300px]">
+                  <ChartContainer config={{}} className="aspect-auto h-[200px] sm:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={weeklyData}>
-                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={10} tickLine={false} axisLine={false} />
                         <Bar dataKey="bugs" name="Reported" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="fixes" name="Fixed" fill="#10b981" radius={[4, 4, 0, 0]} />
                         <ChartTooltip content={<ChartTooltipContent />} />
@@ -208,206 +207,212 @@ export default function Dashboard() {
             </Card>
             
             <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Bug Status Distribution</CardTitle>
-                <CardDescription>Distribution of bugs by status</CardDescription>
+              <CardHeader className="space-y-1 sm:space-y-1.5">
+                <CardTitle className="text-base sm:text-lg">Bug Status Distribution</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Distribution of bugs by status</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="h-[300px] flex items-center justify-center">
-                    <Skeleton className="h-[250px] w-full" />
+                  <div className="h-[200px] sm:h-[300px] flex items-center justify-center">
+                    <Skeleton className="h-[180px] sm:h-[250px] w-full" />
                   </div>
                 ) : (
-                  <BugStats bugs={bugs} />
+                  <div className="h-[200px] sm:h-[300px]">
+                    <BugStats bugs={bugs} />
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="col-span-2">
-              <CardHeader>
-                <CardTitle>Project Bug Distribution</CardTitle>
-                <CardDescription>Bug distribution across all projects</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[400px]">
+        <TabsContent value="analytics" className="space-y-2 sm:space-y-4">
+          <Card>
+            <CardHeader className="space-y-1 sm:space-y-1.5">
+              <CardTitle className="text-base sm:text-lg">Project Bug Distribution</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Bug distribution across all projects</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px] sm:h-[400px]">
                 {isLoading ? (
                   <div className="h-full flex items-center justify-center">
-                    <Skeleton className="h-[350px] w-full" />
+                    <Skeleton className="h-[230px] sm:h-[350px] w-full" />
                   </div>
                 ) : (
                   <ProjectStats />
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="projects" className="space-y-4">
+        <TabsContent value="projects" className="space-y-2 sm:space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Projects Overview</CardTitle>
-              <CardDescription>Status of all your projects</CardDescription>
+            <CardHeader className="space-y-1 sm:space-y-1.5">
+              <CardTitle className="text-base sm:text-lg">Projects Overview</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Status of all your projects</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className={`${isMobile ? 'h-[300px]' : 'h-[400px]'} w-full rounded-md`}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Name</TableHead>
-                      <TableHead className="hidden md:table-cell">Description</TableHead>
-                      <TableHead>Total Bugs</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array(5).fill(0).map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                          <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-full" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[30px]" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-4 w-[60px] ml-auto" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      projects.map((project) => {
-                        const dashboard = getProjectDashboard(project);
-                        return (
-                          <TableRow key={project.id}>
-                            <TableCell className="font-medium">
-                              <Link to={`/projects/${project.id}`}>{project.name}</Link>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {project.description.length > 50 
-                                ? `${project.description.substring(0, 50)}...` 
-                                : project.description}
-                            </TableCell>
-                            <TableCell>{dashboard.totalBugs}</TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant={dashboard.totalBugs > 0 ? "outline" : "secondary"}>
-                                {dashboard.totalBugs > 0 ? 'Active' : 'No bugs'}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                    {!isLoading && projects.length === 0 && (
+              <ScrollArea className="h-[250px] sm:h-[400px] w-full rounded-md">
+                <div className="min-w-[600px]">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center h-32">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <p className="text-muted-foreground">No projects found.</p>
-                            <Link 
-                              to="/projects" 
-                              className="text-sm text-primary underline underline-offset-4"
-                            >
-                              Add your first project
-                            </Link>
-                          </div>
-                        </TableCell>
+                        <TableHead className="w-[100px]">Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Description</TableHead>
+                        <TableHead>Total Bugs</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        Array(5).fill(0).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                            <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-full" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-[30px]" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-4 w-[60px] ml-auto" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        projects.map((project) => {
+                          const dashboard = getProjectDashboard(project);
+                          return (
+                            <TableRow key={project.id}>
+                              <TableCell className="font-medium text-sm">
+                                <Link to={`/projects/${project.id}`}>{project.name}</Link>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell text-sm">
+                                {project.description.length > 50 
+                                  ? `${project.description.substring(0, 50)}...` 
+                                  : project.description}
+                              </TableCell>
+                              <TableCell className="text-sm">{dashboard.totalBugs}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant={dashboard.totalBugs > 0 ? "outline" : "secondary"} className="text-xs">
+                                  {dashboard.totalBugs > 0 ? 'Active' : 'No bugs'}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                      {!isLoading && projects.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center h-24 sm:h-32">
+                            <div className="flex flex-col items-center justify-center gap-1 sm:gap-2">
+                              <p className="text-sm text-muted-foreground">No projects found.</p>
+                              <Link 
+                                to="/projects" 
+                                className="text-xs sm:text-sm text-primary underline underline-offset-4"
+                              >
+                                Add your first project
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </ScrollArea>
             </CardContent>
             <CardFooter>
-              <Link to="/projects" className="text-sm text-primary flex items-center gap-1">
-                View all projects <ArrowUpRight className="h-4 w-4" />
+              <Link to="/projects" className="text-xs sm:text-sm text-primary flex items-center gap-1">
+                View all projects <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </CardFooter>
           </Card>
         </TabsContent>
 
-        <TabsContent value="recent" className="space-y-4">
+        <TabsContent value="recent" className="space-y-2 sm:space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Recent Bugs</CardTitle>
-              <CardDescription>Latest reported bugs across all projects</CardDescription>
+            <CardHeader className="space-y-1 sm:space-y-1.5">
+              <CardTitle className="text-base sm:text-lg">Recent Bugs</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Latest reported bugs across all projects</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className={`${isMobile ? 'h-[300px]' : 'h-[400px]'} w-full rounded-md`}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead className="hidden md:table-cell">Project</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array(5).fill(0).map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                          <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[100px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      recentBugs.map((bug) => {
-                        const project = projects.find(p => p.id === bug.project_id);
-                        return (
-                          <TableRow key={bug.id}>
-                            <TableCell className="font-medium">
-                              <Link to={`/bugs/${bug.id}`}>{bug.title}</Link>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">{project?.name || 'Unknown'}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline" 
-                                className={`
-                                  ${bug.priority === 'high' ? 'border-bugpriority-high text-bugpriority-high' :
-                                    bug.priority === 'medium' ? 'border-bugpriority-medium text-bugpriority-medium' :
-                                    'border-bugpriority-low text-bugpriority-low'}
-                                `}
-                              >
-                                {bug.priority}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={`
-                                  ${bug.status === 'fixed' ? 'border-bugstatus-fixed text-bugstatus-fixed' :
-                                    bug.status === 'pending' ? 'border-bugstatus-pending text-bugstatus-pending' :
-                                    'border-bugstatus-declined text-bugstatus-declined'}
-                                `}
-                              >
-                                {bug.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                    {!isLoading && recentBugs.length === 0 && (
+              <ScrollArea className="h-[250px] sm:h-[400px] w-full rounded-md">
+                <div className="min-w-[600px]">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center h-32">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <p className="text-muted-foreground">No bugs found.</p>
-                            <Link 
-                              to="/bugs/new" 
-                              className="text-sm text-primary underline underline-offset-4"
-                            >
-                              Report your first bug
-                            </Link>
-                          </div>
-                        </TableCell>
+                        <TableHead>Title</TableHead>
+                        <TableHead className="hidden sm:table-cell">Project</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        Array(5).fill(0).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                            <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[100px]" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        recentBugs.map((bug) => {
+                          const project = projects.find(p => p.id === bug.project_id);
+                          return (
+                            <TableRow key={bug.id}>
+                              <TableCell className="font-medium text-sm">
+                                <Link to={`/bugs/${bug.id}`}>{bug.title}</Link>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell text-sm">{project?.name || 'Unknown'}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline" 
+                                  className={`text-xs
+                                    ${bug.priority === 'high' ? 'border-bugpriority-high text-bugpriority-high' :
+                                      bug.priority === 'medium' ? 'border-bugpriority-medium text-bugpriority-medium' :
+                                      'border-bugpriority-low text-bugpriority-low'}
+                                  `}
+                                >
+                                  {bug.priority}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs
+                                    ${bug.status === 'fixed' ? 'border-bugstatus-fixed text-bugstatus-fixed' :
+                                      bug.status === 'pending' ? 'border-bugstatus-pending text-bugstatus-pending' :
+                                      'border-bugstatus-declined text-bugstatus-declined'}
+                                  `}
+                                >
+                                  {bug.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                      {!isLoading && recentBugs.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center h-24 sm:h-32">
+                            <div className="flex flex-col items-center justify-center gap-1 sm:gap-2">
+                              <p className="text-sm text-muted-foreground">No bugs found.</p>
+                              <Link 
+                                to="/bugs/new" 
+                                className="text-xs sm:text-sm text-primary underline underline-offset-4"
+                              >
+                                Report your first bug
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </ScrollArea>
             </CardContent>
             <CardFooter>
-              <Link to="/bugs" className="text-sm text-primary flex items-center gap-1">
-                View all bugs <ArrowUpRight className="h-4 w-4" />
+              <Link to="/bugs" className="text-xs sm:text-sm text-primary flex items-center gap-1">
+                View all bugs <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </CardFooter>
           </Card>
