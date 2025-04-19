@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCaption, TableCell, 
   TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
-
+import { toast } from '@/components/ui/use-toast';
 import { 
   ChartContainer, 
   ChartTooltip, 
@@ -24,66 +24,140 @@ import { Bar, BarChart, Line, LineChart, ResponsiveContainer, XAxis, YAxis } fro
 import { ArrowUpRight, BarChart3, LineChart as LineChartIcon, PieChart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { bugService } from '@/services/bugService';
+import { dashboardService, WeeklyStats, UserStats } from '@/services/dashboardService';
+
+interface WeeklyData {
+  name: string;
+  bugs: number;
+  fixes: number;
+}
+
+interface BugStatusData {
+  name: string;
+  value: number;
+}
+
+interface DashboardStats {
+  totalBugs: number;
+  fixedBugs: number;
+  userBugs: number;
+  userFixedBugs: number;
+  projects: Project[];
+  weeklyActivity: WeeklyData[];
+  statusDistribution: BugStatusData[];
+  recentBugs: Bug[];
+}
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
-  const { bugs, getBugsByProject } = useBugs();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalBugs: 0,
+    fixedBugs: 0,
+    userBugs: 0,
+    userFixedBugs: 0,
+    projects: [],
+    weeklyActivity: [],
+    statusDistribution: [],
+    recentBugs: []
+  });
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        const initialProjects = await projectStore.getProjects();
-        setProjects(initialProjects);
+        const [
+          projects,
+          bugs,
+          weeklyActivity,
+          userStats,
+          statusDistribution,
+          recentActivities
+        ] = await Promise.all([
+          projectStore.getProjects(),
+          bugService.getBugs(),
+          dashboardService.getWeeklyActivity(),
+          currentUser ? dashboardService.getUserStats(currentUser.id) : null,
+          dashboardService.getBugStatusDistribution(),
+          dashboardService.getRecentActivities(5)
+        ]) as [Project[], Bug[], WeeklyStats[], UserStats | null, any, Bug[]];
+
+        // Process all the data
+        const userBugsData = bugs.filter(bug => bug.reported_by === currentUser?.id);
+        const fixedBugs = bugs.filter(bug => bug.status === 'fixed');
+        const userFixedBugs = userBugsData.filter(bug => bug.status === 'fixed');
+
+        setStats({
+          totalBugs: bugs.length,
+          fixedBugs: fixedBugs.length,
+          userBugs: userBugsData.length,
+          userFixedBugs: userFixedBugs.length,
+          projects,
+          weeklyActivity: processWeeklyData(weeklyActivity),
+          statusDistribution: processStatusDistribution(statusDistribution),
+          recentBugs: bugs
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5)
+        });
+
       } catch (error) {
-        console.error("Failed to fetch projects:", error);
+        console.error("Failed to fetch dashboard data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProjects();
-  }, []);
+    fetchDashboardData();
+  }, [currentUser]);
 
-  const filterBugsByUser = (bugs: Bug[], userId: string) => {
-    return bugs.filter(
-      bug => bug.reported_by === userId
-    );
+  const processWeeklyData = (data: any[]): WeeklyData[] => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const currentDayIndex = today.getDay();
+    
+    // Ensure we have data for all days
+    const processedData = days.map(day => ({
+      name: day,
+      bugs: 0,
+      fixes: 0
+    }));
+
+    // Fill in the actual data
+    data.forEach(item => {
+      const date = new Date(item.date);
+      const dayIndex = date.getDay();
+      processedData[dayIndex].bugs = item.bugs;
+      processedData[dayIndex].fixes = item.fixes;
+    });
+
+    // Reorder days to start from current day
+    return [
+      ...processedData.slice(currentDayIndex + 1),
+      ...processedData.slice(0, currentDayIndex + 1)
+    ];
   };
 
-  const userBugs = currentUser ? filterBugsByUser(bugs, currentUser.id) : [];
+  const processStatusDistribution = (data: any): BugStatusData[] => {
+    return [
+      { name: 'Fixed', value: data.fixed || 0 },
+      { name: 'Pending', value: (data.pending || 0) + (data.in_progress || 0) },
+      { name: 'Declined', value: (data.declined || 0) + (data.rejected || 0) }
+    ];
+  };
 
   const getProjectDashboard = (project: Project) => {
+    const projectBugs = stats.recentBugs.filter(bug => bug.project_id === project.id);
     return {
-      totalBugs: getBugsByProject(project.id).length,
+      totalBugs: projectBugs.length,
     };
   };
-
-  // Generate weekly activity data
-  const generateWeeklyData = () => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map(day => ({
-      name: day,
-      bugs: Math.floor(Math.random() * 10),
-      fixes: Math.floor(Math.random() * 8),
-    }));
-  };
-
-  const weeklyData = generateWeeklyData();
-
-  // Bug status distribution data
-  const bugStatusData = [
-    { name: 'Fixed', value: bugs.filter(bug => bug.status === 'fixed').length },
-    { name: 'Pending', value: bugs.filter(bug => bug.status === 'pending').length },
-    { name: 'Declined', value: bugs.filter(bug => (bug.status === 'declined' || bug.status === 'rejected')).length }
-  ];
-
-  const recentBugs = [...bugs]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
 
   return (
     <div className="space-y-3 sm:space-y-4 lg:space-y-6 p-2 sm:p-4 lg:p-6 max-w-[1600px] mx-auto">
@@ -105,10 +179,10 @@ export default function Dashboard() {
             {isLoading ? (
               <Skeleton className="h-5 sm:h-6 lg:h-8 w-14 sm:w-16 lg:w-20" />
             ) : (
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{bugs.length}</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{stats.totalBugs}</div>
             )}
             <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-              {bugs.filter(bug => bug.status === 'fixed').length} bugs fixed
+              {stats.fixedBugs} bugs fixed
             </p>
           </CardContent>
         </Card>
@@ -122,10 +196,10 @@ export default function Dashboard() {
             {isLoading ? (
               <Skeleton className="h-5 sm:h-6 lg:h-8 w-14 sm:w-16 lg:w-20" />
             ) : (
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{userBugs.length}</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{stats.userBugs}</div>
             )}
             <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-              {userBugs.filter(bug => bug.status === 'fixed').length} bugs fixed
+              {stats.userFixedBugs} bugs fixed
             </p>
           </CardContent>
         </Card>
@@ -139,10 +213,10 @@ export default function Dashboard() {
             {isLoading ? (
               <Skeleton className="h-5 sm:h-6 lg:h-8 w-14 sm:w-16 lg:w-20" />
             ) : (
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{projects.length}</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{stats.projects.length}</div>
             )}
             <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-              {projects.length > 0 ? 'Active projects' : 'No active projects'}
+              {stats.projects.length > 0 ? 'Active projects' : 'No active projects'}
             </p>
           </CardContent>
         </Card>
@@ -157,13 +231,13 @@ export default function Dashboard() {
               <Skeleton className="h-5 sm:h-6 lg:h-8 w-14 sm:w-16 lg:w-20" />
             ) : (
               <div className="text-lg sm:text-xl lg:text-2xl font-bold">
-                {bugs.length > 0 
-                  ? `${Math.round((bugs.filter(bug => bug.status === 'fixed').length / bugs.length) * 100)}%` 
+                {stats.totalBugs > 0 
+                  ? `${Math.round((stats.fixedBugs / stats.totalBugs) * 100)}%` 
                   : 'N/A'}
               </div>
             )}
             <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-              {bugs.filter(bug => bug.status === 'fixed').length} out of {bugs.length}
+              {stats.fixedBugs} out of {stats.totalBugs}
             </p>
           </CardContent>
         </Card>
@@ -203,7 +277,7 @@ export default function Dashboard() {
                 ) : (
                   <ChartContainer config={{}} className="aspect-auto h-[180px] sm:h-[250px] lg:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <BarChart data={stats.weeklyActivity} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <XAxis 
                           dataKey="name" 
                           fontSize={10} 
@@ -256,7 +330,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="h-[180px] sm:h-[250px] lg:h-[300px]">
-                    <BugStats bugs={bugs} />
+                    <BugStats bugs={stats.recentBugs} />
                   </div>
                 )}
               </CardContent>
@@ -317,7 +391,7 @@ export default function Dashboard() {
                           </TableRow>
                         ))
                       ) : (
-                        projects.map((project) => {
+                        stats.projects.map((project) => {
                           const dashboard = getProjectDashboard(project);
                           return (
                             <TableRow key={project.id}>
@@ -346,7 +420,7 @@ export default function Dashboard() {
                           );
                         })
                       )}
-                      {!isLoading && projects.length === 0 && (
+                      {!isLoading && stats.projects.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center h-20 sm:h-24 lg:h-32">
                             <div className="flex flex-col items-center justify-center gap-1 sm:gap-2">
@@ -411,8 +485,8 @@ export default function Dashboard() {
                           </TableRow>
                         ))
                       ) : (
-                        recentBugs.map((bug) => {
-                          const project = projects.find(p => p.id === bug.project_id);
+                        stats.recentBugs.map((bug) => {
+                          const project = stats.projects.find(p => p.id === bug.project_id);
                           return (
                             <TableRow key={bug.id}>
                               <TableCell className="font-medium text-[11px] sm:text-xs lg:text-sm py-2 sm:py-3">
@@ -451,7 +525,7 @@ export default function Dashboard() {
                           );
                         })
                       )}
-                      {!isLoading && recentBugs.length === 0 && (
+                      {!isLoading && stats.recentBugs.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center h-20 sm:h-24 lg:h-32">
                             <div className="flex flex-col items-center justify-center gap-1 sm:gap-2">
